@@ -1,6 +1,7 @@
 /node_modules
 /settings-backup
 /.env
+/config.json
 /package-lock.json
 /yarn.lock
 /robots.txt

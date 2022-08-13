@@ -12,6 +12,7 @@ const mime = require('mime-types')
 const { gzip } = require('node-gzip')
 const settings = require('../settings')
 const { host } = require('../settings')
+const config = require('../config')
 
 // const useragent = require('express-useragent')
 
@@ -107,7 +108,7 @@ const removeElement = async (data, dom) => {
 const remakeUrlElement = async (dom, option) => {
   return new Promise((resolve, reject) => {
     const hostnameComing = option.hostname
-    console.log(option)
+
     dom.querySelectorAll(option.element).forEach((a) => {
       let hrefAttr = a.getAttribute(option.target)
       if (hrefAttr == null) {
@@ -140,7 +141,7 @@ const remakeUrlElement = async (dom, option) => {
           const hostnameHref = parseUrl(hrefAttr).hostname
           if (hostnameHref === hostnameComing) {
             const mapHref = parseUrl(hrefAttr)
-            console.log(mapHref)
+
             const pathHref = mapHref.pathname + mapHref.query
             const dataReplace = option.origin + pathHref
             a.setAttribute(option.remake, dataReplace)
@@ -152,13 +153,13 @@ const remakeUrlElement = async (dom, option) => {
               const protoHref = mapHref.protocol.replace(':', '-')
               const pathHref = mapHref.pathname + mapHref.query
               const dataReplace = option.origin + '/' + option.permalink + '-' + protoHref + hostnameHref + pathHref
-              console.log(pathHref)
+
               const dontRemakeList = [
                 'blogger.googleusercontent.com',
                 'bp.blogspot.com'
               ]
-              console.log(process.env.ENCRYPT_HOST)
-              if (dontRemakeList.includes(hostnameHref) === false && process.env.ENCRYPT_HOST_GOOGLE === 'true') {
+
+              if (dontRemakeList.includes(hostnameHref) === false && config.encrypt_host_google === 'true') {
                 a.setAttribute(option.remake, dataReplace)
               } else {
                 a.setAttribute(option.remake, dataReplace)
@@ -254,7 +255,7 @@ module.exports = async (req, res, isbot = false) => {
         'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /ajax/\nDisallow: /json/\nDisallow: /member/\nDisallow: /auth/\n\n\n'
       )
       sitemapList.forEach((a) => {
-        res.write(`${process.env.HOST}/sitemap-https-${a}\n`)
+        res.write(`${config.server.host}/sitemap-https-${a}\n`)
       })
 
       res.send()
@@ -272,7 +273,7 @@ module.exports = async (req, res, isbot = false) => {
       settings.sitemap_list.forEach(function (a) {
         res.write(' <sitemap>\n')
         res.write(
-          `   <loc>${process.env.HOST}/sitemap-https-` + a + '</loc>\n'
+          `   <loc>${config.server.host}/sitemap-https-` + a + '</loc>\n'
         )
         // res.write(`   <lastmod>` + new Date().toISOString() + `</lastmod>\n`);
         res.write(' </sitemap>\n')
@@ -283,7 +284,7 @@ module.exports = async (req, res, isbot = false) => {
       res.send()
     } else if (req.url === '/pingsitemap') {
       res.status(200)
-      const sitemapUrl = `https://www.google.com/webmasters/tools/ping?sitemap=${process.env.HOST}/${process.env.SITE_SITEMAP_LINK}`
+      const sitemapUrl = `https://www.google.com/webmasters/tools/ping?sitemap=${config.server.host}/${config.sitemap.path}`
       const pingCommand = await curlContent(sitemapUrl)
       res.write(pingCommand)
       res.send('ok')
@@ -413,7 +414,7 @@ module.exports = async (req, res, isbot = false) => {
             .replace('http-', 'http://')
           statusOrigin = false
           dataOrigin = (await typePermalink) + '-' + parseUrl(linkPost).origin.replace('https://', 'https-').replace('http://', 'http-')
-          if (process.env.ENCRYPT_HOST === 'true') {
+          if (config.encrypt_host_google === 'true') {
             dataOrigin = Buffer.from(dataOrigin, 'base64url').toString()
           }
         }
@@ -533,7 +534,7 @@ module.exports = async (req, res, isbot = false) => {
                 })
 
                 // insert histats inline
-                const histatsid = process.env.HISTATS_ID || null
+                const histatsid = config.web.histats_id || null
                 if (histatsid != null) {
                   const histats = dom.createElement('script')
                   histats.type = 'text/javascript'
