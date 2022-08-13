@@ -1,4 +1,5 @@
 module.exports = {
+  encrpyt_url: true,
   server: {
     host: 'https://localpc.cuan.dev',
     port: 3000
@@ -10,13 +11,13 @@ module.exports = {
     histats_id: '4646696'
   },
   permalink: {
-    base: ['source']
+    base: ['web']
   },
   sitemap: {
     path: '/sitemap.xml',
     lists: [
-      'google.com/sitemap.xml',
-      'www.example.com/sitemap-index.xml'
+      'https://hargadepo.com/sitemap_index.xml',
+      'https://www.portal-ilmu.com/sitemap.xml'
     ]
   },
   webmaster: {

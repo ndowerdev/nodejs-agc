@@ -1,4 +1,5 @@
 const fs = require('fs')
+const fx28 = require('fx28-node')
 const unirest = require('unirest')
 // const random_useragent = require('random-useragent')
 const isUrl = require('is-valid-http-url')
@@ -117,6 +118,9 @@ const remakeUrlElement = async (dom, option) => {
         if (hrefAttr.indexOf('//') === 0) {
           hrefAttr = hrefAttr.replace('//', option.proto + '://')
         } else {
+          // tandanya
+
+          // console.log(hrefAttrx)
           if (isUrl(hrefAttr) === false) {
             if (hrefAttr.indexOf('#') === 0) {
               hrefAttr = '#'
@@ -128,7 +132,6 @@ const remakeUrlElement = async (dom, option) => {
               hrefAttr = option.url + '/' + hrefAttr
             }
 
-            hrefAttr = Buffer.from(hrefAttr, 'base64url').toString()
             // console.log(hrefAttr)
             // if (process.env.ENCRYPT_HOST === 'true') {
             //   hrefAttr = Buffer.from(hrefAttr, 'base64url').toString()
@@ -138,7 +141,8 @@ const remakeUrlElement = async (dom, option) => {
         }
         // dont remake base64 image
         if (!a.getAttribute(option.target).includes('base64')) {
-          const hostnameHref = parseUrl(hrefAttr).hostname
+          // console.log(option)
+          let hostnameHref = parseUrl(hrefAttr).hostname
           if (hostnameHref === hostnameComing) {
             const mapHref = parseUrl(hrefAttr)
 
@@ -150,9 +154,19 @@ const remakeUrlElement = async (dom, option) => {
               a.setAttribute(option.remake, hrefAttr)
             } else {
               const mapHref = parseUrl(hrefAttr)
+              // eslint-disable-next-line no-unused-vars
               const protoHref = mapHref.protocol.replace(':', '-')
               const pathHref = mapHref.pathname + mapHref.query
-              const dataReplace = option.origin + '/' + option.permalink + '-' + protoHref + hostnameHref + pathHref
+
+              // const dataReplace = option.origin + '/' + option.permalink + '-' + protoHref + hostnameHref + pathHref
+              // console.log(option.permalink)
+              if (config.encrpyt_url) {
+                // hostnameHref = Buffer.from(option.permalink + '-' + protoHref + hostnameHref, 'utf8').toString('base64')
+                hostnameHref = fx28.encode(Buffer.from(option.permalink + '-' + protoHref + hostnameHref, 'utf8'))
+              } else {
+                hostnameHref = option.permalink + '-' + protoHref + hostnameHref
+              }
+              const dataReplace = option.origin + '/' + hostnameHref + pathHref
 
               const dontRemakeList = [
                 'blogger.googleusercontent.com',
@@ -241,39 +255,62 @@ module.exports = async (req, res, isbot = false) => {
   // }
 
   const originUrl = 'https://' + req.headers.host
+
   // let originUrl = (await proto) + "://" + req.headers.host;
   // let fullUrl = (await originUrl) + req.url;
-  const fullUrl = originUrl + req.url
-  let typePermalink = await cekPermalink(req.url, mapPermalink)
+  // req.url = Buffer.from(req.url.replace('/', ''), 'base64').toString('utf-8')
 
+  if (config.encrpyt_url && !req.url.startsWith('/assets') && !req.url.startsWith('/sitemap.xml') && !req.url.startsWith('/robots')) {
+    const split = req.url.split('/')
+
+    const encodedString = split[1].trim()
+    // const decodedString = Buffer.from(encodedString, 'base64').toString('utf-8')
+    const decodedString = fx28.decode(encodedString).toString()
+
+    req.url = req.url.replace(encodedString, decodedString)
+  }
+
+  const fullUrl = originUrl + req.url
+
+  let typePermalink = await cekPermalink(req.url, mapPermalink)
+  // console.log(typePermalink)
   try {
     // check if robots.txt
     if (req.url === '/robots.txt') {
       res.status(200)
-      const sitemapList = settings.sitemap_list
+      const sitemapList = settings.sitemapList
+      const sitemapPermalink = await randomPermalink(mapPermalink)
+      console.log(sitemapPermalink)
       res.write(
         'User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /ajax/\nDisallow: /json/\nDisallow: /member/\nDisallow: /auth/\n\n\n'
       )
       sitemapList.forEach((a) => {
-        res.write(`${config.server.host}/sitemap-https-${a}\n`)
+        res.write(`${config.server.host}/${sitemapPermalink}-https-${a}\n`)
       })
 
       res.send()
     } else if (req.url === dataSetting.sitemapPermalink) {
       res.setHeader('Content-Type', 'application/xml')
       res.status(200)
-      res.write(
-        '<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="' +
-          originUrl.replace('http://', 'https://') +
-          '/assets/main-sitemap.xsl"?>\n'
-      )
-      res.write(
-        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-      )
-      settings.sitemap_list.forEach(function (a) {
+      res.write('<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="' + originUrl.replace('http://', 'https://') + '/assets/main-sitemap.xsl"?>\n')
+      res.write('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+
+      const sitemapPermalink = await randomPermalink(mapPermalink)
+      // settings.sitemap_list.forEach(function (a) {
+      config.sitemap.lists.forEach(function (a) {
+        let encodedUrlParam = `${sitemapPermalink}-${a.replace('://', '-')}`
+        if (config.encrpyt_url) {
+          const parsing = parseUrl(a)
+          const urlParam = `web-${parsing.protocol.replace(':', '-')}${parsing.hostname}`
+          encodedUrlParam = fx28.encode(Buffer.from(urlParam), 'utf8') + `${parsing.pathname}`
+          console.log(encodedUrlParam)
+        }
+
         res.write(' <sitemap>\n')
+
         res.write(
-          `   <loc>${config.server.host}/sitemap-https-` + a + '</loc>\n'
+          // `   <loc>${config.server.host}/sitemap-https-` + a + '</loc>\n'
+          `   <loc>${config.server.host}/${encodedUrlParam}</loc>\n`
         )
         // res.write(`   <lastmod>` + new Date().toISOString() + `</lastmod>\n`);
         res.write(' </sitemap>\n')
@@ -296,7 +333,8 @@ module.exports = async (req, res, isbot = false) => {
     ) {
       let statusSitemap = false
       let linkSubSitemap = ''
-      targetSitemap.forEach(function (a) {
+
+      config.sitemap.lists.forEach(function (a) {
         if (req.url.indexOf(a) === 1) {
           statusSitemap = true
           linkSubSitemap = a
@@ -307,11 +345,11 @@ module.exports = async (req, res, isbot = false) => {
         const getLinkSubSitemap = await getFile(linkSubSitemap)
         const data = getLinkSubSitemap
         if (data === 'err') {
-          res.end('404')
+          res.end('404a')
         } else {
           const listUrlSitemap = data.split('\n')
           if (listUrlSitemap.length === 0) {
-            res.end('404')
+            res.end('404b')
           } else {
             res.write(
               '<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="' +
@@ -356,18 +394,8 @@ module.exports = async (req, res, isbot = false) => {
         res.write('</sitemapindex>\n<!-- XML Sitemap generated by NodeJs -->')
         res.end()
       }
-    } else if (req.url === '/robots.txt' && req.method === 'GET') {
-      // ------- robots.txt --------------
-      const data = await getFile('robots.txt')
-      res.writeHead(200, {
-        'content-type': 'text/plain; charset=UTF-8'
-      })
-      res.end(data)
-    } else if (
-      (req.url.split('/assets/')[1] === undefined) === false &&
-      req.method === 'GET' &&
-      typePermalink == null
-    ) {
+    // eslint-disable-next-line brace-style
+    } else if ((req.url.split('/assets/')[1] === undefined) === false && req.method === 'GET' && typePermalink == null) {
       // ------- file assets -----------
       const dataFile = req.url.split('/assets/')[1]
       if (dataFile.length > 0) {
@@ -387,13 +415,13 @@ module.exports = async (req, res, isbot = false) => {
             })
             res.end(data)
           } else {
-            res.end('404')
+            res.end('404c')
           }
         } else {
-          res.end('404')
+          res.end('404d')
         }
       } else {
-        res.end('404')
+        res.end('404e')
       }
     } else if ((req.url.length > 1 && req.method === 'GET') || req.url === '/') {
       // ----------- page --------
@@ -401,8 +429,20 @@ module.exports = async (req, res, isbot = false) => {
       try {
         const urlPost = (await parseUrl(req.url).pathname.replace('/', '')) + parseUrl(req.url).query
 
+        // if (config.encrpyt_url) {
+        //   const split = urlPost.split('/')
+
+        //   const encodedString = split[0]
+
+        //   // const decodedString = Buffer.from(encodedString, 'base64').toString('utf-8')
+        //   const decodedString = fx28.decode(encodedString).toString()
+
+        //   urlPost = urlPost.replace(encodedString, decodedString).trim()
+        // }
+
         // eslint-disable-next-line no-unused-vars
         const typeMime = await mime.lookup(urlPost)
+
         let linkPost = (await dataSetting.target) + '/' + urlPost
 
         let statusOrigin = true
@@ -413,16 +453,22 @@ module.exports = async (req, res, isbot = false) => {
             .replace('https-', 'https://')
             .replace('http-', 'http://')
           statusOrigin = false
+
+          const parsingLinkPost = parseUrl(linkPost)
+
           dataOrigin = (await typePermalink) + '-' + parseUrl(linkPost).origin.replace('https://', 'https-').replace('http://', 'http-')
-          if (config.encrypt_host_google === 'true') {
-            dataOrigin = Buffer.from(dataOrigin, 'base64url').toString()
+          if (config.encrpyt_url) {
+            const urlParam = `web-${parsingLinkPost.protocol.replace(':', '-')}${parsingLinkPost.hostname}`
+            dataOrigin = fx28.encode(Buffer.from(urlParam), 'utf8')
+            // const urlParam = `web-${parsingLinkPost.protocol.replace(':', '-')}${parsingLinkPost.hostname}`
+            // dataOrigin = fx28.encode(Buffer.from(urlParam), 'utf8') + `${parsingLinkPost.pathname}`
           }
         }
         if (isUrl(linkPost)) {
           const getInfo = await curlLink(linkPost)
 
           if (getInfo === 'err') {
-            res.end('404')
+            res.end('404e')
           } else {
             const typeContent = getInfo.headers['content-type']
             const codeContent = getInfo.code
@@ -453,7 +499,7 @@ module.exports = async (req, res, isbot = false) => {
                */
 
               if (body === 'err') {
-                res.end('404')
+                res.end('404f')
               } else {
                 res.writeHead(200, {
                   'content-type': typeContent,
@@ -738,12 +784,12 @@ module.exports = async (req, res, isbot = false) => {
                     res.end()
                   })
                   .catch(function (e) {
-                    res.end('404')
+                    res.end('404g')
                   })
               }
             } else {
               if (codeContent === 404) {
-                res.end('404')
+                res.end('404h')
               } else {
                 // check content image
                 // console.log("--------")
@@ -757,7 +803,7 @@ module.exports = async (req, res, isbot = false) => {
                     gzip: true
                   }).on('error', (error) => {
                     console.log(error)
-                    res.end('404')
+                    res.end('404i')
                   }).pipe(res)
                 } else if (
                   typeContent.indexOf('application/atom+xml') === 0 ||
@@ -777,7 +823,7 @@ module.exports = async (req, res, isbot = false) => {
                     })
                     .on('error', (error) => {
                       console.log(error)
-                      res.end('404')
+                      res.end('404j')
                     })
                   getContent.on('data', function (data) {
                     dataXML = dataXML + data
@@ -787,6 +833,7 @@ module.exports = async (req, res, isbot = false) => {
                       const hostname = '//' + parseUrl(linkPost).hostname
                       let re = new RegExp(dataSetting.target, 'g')
                       const re2 = new RegExp(hostname, 'g')
+
                       if (statusOrigin === false) {
                         re = new RegExp(parseUrl(linkPost).origin, 'g')
                       }
@@ -794,6 +841,7 @@ module.exports = async (req, res, isbot = false) => {
                         re,
                         originUrl + '/' + dataOrigin
                       )
+
                       dataXML = dataXML.replace(
                         re2,
                         originUrl + '/' + dataOrigin
@@ -811,6 +859,7 @@ module.exports = async (req, res, isbot = false) => {
                           originUrl + '/' + dataOrigin
                         )
                       }
+                      // console.log(dataXML)
                       // const re4 = new RegExp('https:http', 'g')
                       // const re5 = new RegExp('https:https', 'g')
                       // const re6 = new RegExp('http:https', 'g')
@@ -823,12 +872,14 @@ module.exports = async (req, res, isbot = false) => {
                       dataXML = dataXML.replace(re5, 'https')
                       dataXML = dataXML.replace(re6, 'https')
                       dataXML = dataXML.replace(re7, 'http')
+
                       res.writeHead(200, {
                         'content-type': typeContent
                       })
+
                       res.end(dataXML)
                     } catch (e) {
-                      res.end('404')
+                      res.end('404k')
                     }
                   })
                 } else if (typeContent.indexOf('text/css') === 0) {
@@ -842,7 +893,7 @@ module.exports = async (req, res, isbot = false) => {
                     })
                     .on('error', (error) => {
                       console.log(error)
-                      res.end('404')
+                      res.end('404l')
                     })
                   getContent.on('data', function (data) {
                     dataCSS = dataCSS + data
@@ -857,23 +908,23 @@ module.exports = async (req, res, isbot = false) => {
                   // console.log(codeContent);
                   // console.log(typeContent);
                   // console.log("1")
-                  res.end('404')
+                  res.end('404m')
                 }
               }
             }
           }
         } else {
           // console.log("3")
-          res.end('404')
+          res.end('404n')
         }
       } catch (e) {
         console.log(e)
         // console.log("4")
-        res.end('404')
+        res.end('404o')
       }
     } else {
       // console.log("5")
-      res.end('404')
+      res.end('404p')
     }
   } catch (e) {
     res.send(e.toString())
