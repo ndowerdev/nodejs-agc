@@ -652,6 +652,13 @@ module.exports = async (req, res, isbot = false) => {
 
                 dataSetting.costom_element_remove.forEach(function (a) {
                   if (hostname.includes(a.target)) {
+                    // if (a.replace_string_rules) {
+                    //   dom = dom.documentElement.outerHTML
+                    //   a.replace_string_rules.forEach(function (b) {
+                    //     // console.log("replace" + b);
+                    //     dom = dom.replaceAll(b.target, b.replace)
+                    //   })
+                    // }
                     if (a.element_remove_selector) {
                       a.element_remove_selector.forEach(function (b) {
                         dom.querySelectorAll(b).forEach(function (c) {
@@ -732,7 +739,19 @@ module.exports = async (req, res, isbot = false) => {
                 } else {
                   dataDescription = ''
                 }
+
                 dom = dom.documentElement.outerHTML
+
+                dataSetting.costom_element_remove.forEach(function (a) {
+                  if (hostname.includes(a.target)) {
+                    if (a.replace_string_rules) {
+                      a.replace_string_rules.forEach(function (b) {
+                        // console.log("replace" + b);
+                        dom = dom.replaceAll(b.target, b.replace)
+                      })
+                    }
+                  }
+                })
 
                 if (dataSetting.remove_comment_html) {
                   removeHtmlComments(domBody).comments.forEach(function (a) {
@@ -773,7 +792,7 @@ module.exports = async (req, res, isbot = false) => {
                 /**
                  * add trim whitespace
                  */
-                // dom = minify(dom, settings.minify_options);
+                // dom = minify(dom, settings.minify_options)
                 // console.log(dom)
                 // dom = dom.replace(/^\s+|\s+$/gm, '')
 
