@@ -1,10 +1,10 @@
-const glob = require("glob");
-let options = {};
-var array = [];
-const files = glob.sync("./rules/*.js");
+const glob = require('glob')
+// const options = {}
+const array = []
+const files = glob.sync('./rules/*.js')
 files.forEach((file) => {
-  let conf = require(file);
-  array.push(conf);
-});
+  const conf = require(file)
+  array.push(conf)
+})
 
-module.exports = array;
+module.exports = array
