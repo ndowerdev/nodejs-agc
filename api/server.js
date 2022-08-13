@@ -260,7 +260,7 @@ module.exports = async (req, res, isbot = false) => {
   // let fullUrl = (await originUrl) + req.url;
   // req.url = Buffer.from(req.url.replace('/', ''), 'base64').toString('utf-8')
 
-  if (config.encrpyt_url && !req.url.startsWith('/assets') && !req.url.startsWith('/sitemap.xml') && !req.url.startsWith('/robots')) {
+  if (config.encrpyt_url && !req.url.startsWith('/assets') && !req.url.startsWith('/sitemap.xml') && !req.url.startsWith('/robots') && !req.url.startsWith('/head.js')) {
     const split = req.url.split('/')
 
     const encodedString = split[1].trim()
