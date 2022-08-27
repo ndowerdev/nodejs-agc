@@ -1,7 +1,7 @@
 /* eslint-disable no-template-curly-in-string */
 module.exports = {
   target: 'anekatempe.web.app',
-  element_remove_selector: ['.navbar-logo', 'script[src*="googletagmanager"]'],
+  element_remove_selector: ['.navbar-logo', 'script[src*="googletagmanager"]', 'div.nav-secondary'],
   replace_script_contains: ['gtag'],
   replace_string_rules: [
     {
