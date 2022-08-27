@@ -4,11 +4,18 @@ module.exports = {
     host: 'https://localpc.cuan.dev',
     port: 3000
   },
+  meta: {
+    title: {
+      append: 'depan ',
+      prepend: 'belakang'
+    }
+  },
   web: {
     name: 'MASTER RESEP',
     author: 'DUDE',
     target: 'https://portal-ilmu.com',
     histats_id: '4646696'
+
   },
   permalink: {
     base: ['web']

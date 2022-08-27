@@ -607,12 +607,15 @@ module.exports = async (req, res, isbot = false) => {
                 let dataTitle = ''
                 const firstTitle = dom.querySelectorAll('title')[0]
                 const firstTitleInner = firstTitle.innerHTML
+                dataTitle = config.meta.title.prepend !== '' ? config.meta.title.prepend.trim() : '' + firstTitleInner + config.meta.title.append ? ` ${config.meta.title.append}` : ''
+
+                // console.log(firstTitleInner)
                 // console.log(req.url);
                 if (req.url !== '/' && isbot === true) {
                   // console.log(isbot)
                   dataTitle = `${dataSetting.webName} ${firstTitleInner}`
                 } else {
-                  dataTitle = firstTitleInner
+                  dataTitle = config.meta.title.prepend !== '' ? config.meta.title.prepend + ' ' + firstTitleInner + ' ' + config.meta.title.append : firstTitleInner
                 }
 
                 // dom.querySelectorAll("title").forEach(function (a) {
@@ -624,7 +627,7 @@ module.exports = async (req, res, isbot = false) => {
                 // console.log(isbot(request.getHeader("User-Agent")));
                 const createTitle = dom.createElement('title')
                 dataTitle = decodeURI(dataTitle)
-                createTitle.innerHTML = dataTitle
+                createTitle.innerHTML = dataTitle + '\n'
                 dom.head.insertBefore(createTitle, dom.head.firstChild)
 
                 // let ogDataTitle = "";
